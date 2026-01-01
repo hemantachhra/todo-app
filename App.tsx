@@ -52,16 +52,12 @@ const App: React.FC = () => {
   const [isProcessingRoadmap, setIsProcessingRoadmap] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
 
-  // Audio Context for Alarm
   const alarmAudioCtx = useRef<AudioContext | null>(null);
-
-  // Live API Refs
   const sessionRef = useRef<any>(null);
   const audioContextsRef = useRef<{ input: AudioContext; output: AudioContext } | null>(null);
   const nextStartTimeRef = useRef<number>(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const micStreamRef = useRef<MediaStream | null>(null);
-
   const currentInputTranscription = useRef<string>("");
   const currentOutputTranscription = useRef<string>("");
 
@@ -257,10 +253,7 @@ const App: React.FC = () => {
     } else {
       const newTask: Task = {
         id: Math.random().toString(36).substr(2, 9),
-        title, 
-        category, 
-        urgency, 
-        time, 
+        title, category, urgency, time, 
         date: date || getTodayDateString(),
         completionPercentage: 0, 
         notes: '', 
@@ -298,7 +291,13 @@ const App: React.FC = () => {
   const displayScore = performanceStats.current % 1 === 0 ? performanceStats.current : parseFloat(performanceStats.current.toFixed(1));
 
   return (
-    <div className="min-h-screen pb-24 relative overflow-x-hidden select-none">
+    <div className="min-h-screen pb-24 relative overflow-x-hidden select-none bg-slate-950">
+      {/* Background Neural Pulse */}
+      <div className="fixed inset-0 pointer-events-none opacity-20 overflow-hidden z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600 blur-[120px] rounded-full animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-900 blur-[150px] rounded-full animate-pulse" style={{ animationDelay: '2s' }}></div>
+      </div>
+
       <header className="px-6 pt-6 pb-4 sticky top-0 z-40 glass border-b border-blue-500/20 rounded-b-[2.5rem] shadow-lg">
         <div className="flex justify-between items-center">
           <div className="flex-1">
@@ -307,7 +306,7 @@ const App: React.FC = () => {
             </h1>
             <div className="flex items-center gap-2">
               <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">TO DO LIST</p>
-              <span className="text-[8px] px-1.5 py-0.5 rounded bg-blue-500/20 border border-blue-500/30 text-blue-300 font-black">V4.1</span>
+              <span className="text-[8px] px-1.5 py-0.5 rounded bg-blue-500/20 border border-blue-500/30 text-blue-300 font-black">V4.2</span>
             </div>
           </div>
           {activeTab === 'routine' && (
@@ -316,7 +315,7 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className={`pt-4 ${activeTab === 'ai' ? 'px-4' : 'px-6'}`}>
+      <main className={`pt-4 relative z-10 ${activeTab === 'ai' ? 'px-4' : 'px-6'}`}>
         {activeTab === 'routine' ? (
           <div className="flex flex-col gap-3">
             {todayActiveTasks.map(task => <TaskCard key={task.id} task={task} onUpdate={updateTask} onDelete={deleteTask} />)}
@@ -325,7 +324,7 @@ const App: React.FC = () => {
         ) : activeTab === 'list' ? (
           <div className="space-y-4">
             {tasks.sort((a,b) => b.date.localeCompare(a.date)).map(task => (
-              <div key={task.id} className="glass p-4 rounded-3xl border border-white/5 shadow-lg">
+              <div key={task.id} className="glass p-4 rounded-3xl border border-white/5 shadow-lg transition-all hover:border-blue-500/30">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <h3 className={`text-sm font-bold truncate ${task.isCompleted ? 'text-slate-600 line-through' : 'text-slate-100'}`}>{task.title}</h3>
@@ -338,15 +337,21 @@ const App: React.FC = () => {
           </div>
         ) : activeTab === 'analytics' ? (
           <div className="space-y-6">
-             <div className="glass p-6 rounded-[2rem] border border-blue-500/20 shadow-[0_0_25px_rgba(59,130,246,0.15)]">
+             <div className="glass p-6 rounded-[2rem] border border-blue-500/20 shadow-[0_0_25px_rgba(59,130,246,0.15)] relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4">
+                   <div className={`w-3 h-3 rounded-full ${displayScore > 0 ? 'bg-green-400 animate-pulse neo-shadow' : 'bg-slate-700'}`}></div>
+                </div>
                 <p className="text-[10px] text-slate-400 uppercase tracking-[0.2em] mb-4 font-black">Efficiency Metric</p>
                 <div className="flex items-baseline gap-2 italic tracking-tighter">
                    <span className="text-6xl font-black text-blue-400 neo-text-glow">{displayScore}</span>
                    <span className="text-2xl font-black text-slate-600">/</span>
                    <span className="text-3xl font-black text-slate-500">{performanceStats.max}</span>
                 </div>
+                <div className="mt-4 w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                   <div className="h-full bg-blue-500 transition-all duration-1000 ease-out" style={{ width: `${performanceStats.percentage}%` }}></div>
+                </div>
              </div>
-             <button onClick={() => setShowReportBook(true)} className="w-full py-6 bg-gradient-to-br from-indigo-600 to-blue-700 rounded-[2rem] flex items-center justify-between px-8 shadow-xl">
+             <button onClick={() => setShowReportBook(true)} className="w-full py-6 bg-gradient-to-br from-indigo-600 to-blue-700 rounded-[2rem] flex items-center justify-between px-8 shadow-xl active:scale-95 transition-all">
                <div className="text-left">
                  <h2 className="text-xl font-black italic uppercase">OPEN AUDIT BOOK</h2>
                </div>
@@ -363,23 +368,16 @@ const App: React.FC = () => {
                 </div>
              </div>
 
-             {/* Strategy Engine Box */}
              <div className="glass p-6 rounded-[2.5rem] border border-white/5 shadow-lg flex flex-col relative overflow-hidden">
                 <div className="flex justify-between items-center mb-5">
                    <h2 className="text-sm font-black uppercase italic tracking-tighter text-blue-400">STRATEGY ENGINE</h2>
                    <button onClick={handleFetchAdvice} className={`px-5 py-2.5 bg-blue-600 text-white text-[10px] font-black rounded-xl uppercase tracking-widest active:scale-95 transition-transform ${isProcessingAdvice ? 'animate-pulse' : ''}`}>Analyse</button>
                 </div>
-                <div className="text-[16px] text-slate-200 min-h-[300px] p-6 bg-slate-950/80 rounded-2xl border border-white/5 whitespace-pre-wrap leading-relaxed shadow-inner font-medium relative overflow-y-auto">
+                <div className="text-[16px] text-slate-200 min-h-[200px] p-6 bg-slate-950/80 rounded-2xl border border-white/5 whitespace-pre-wrap leading-relaxed shadow-inner font-medium relative overflow-y-auto">
                   {isProcessingAdvice && (
                     <div className="absolute inset-0 z-20 bg-slate-950/95 backdrop-blur-2xl flex flex-col items-center justify-center rounded-2xl text-center p-8">
                        <span className="text-7xl block mb-6 animate-bounce">⚡</span>
                        <p className="text-[13px] font-black text-blue-400 uppercase tracking-[0.5em] animate-pulse">RIA IS WORKING...</p>
-                       <div className="mt-4 flex flex-col gap-1 w-full max-w-[150px]">
-                          <div className="h-1 bg-blue-500/20 rounded-full overflow-hidden">
-                             <div className="h-full bg-blue-500 animate-[shimmer_2s_infinite]" style={{width: '60%'}}></div>
-                          </div>
-                          <p className="text-[8px] text-slate-600 font-black uppercase tracking-widest">CALIBRATING NEURALS</p>
-                       </div>
                     </div>
                   )}
                   {aiAdvice || (selectedLanguage === 'Hindi' ? "रणनीति विश्लेषण आदेशों की प्रतीक्षा है..." : "Awaiting strategy analysis commands...")}
@@ -393,22 +391,17 @@ const App: React.FC = () => {
                 </button>
              </div>
 
-             {/* Road Map Box */}
              {(dayPlan !== null || isProcessingRoadmap) && (
                <div className="glass p-6 rounded-[2.5rem] border border-blue-500/20 shadow-[0_0_50px_rgba(59,130,246,0.2)] flex flex-col animate-in slide-in-from-bottom-10 zoom-in-95 duration-500 relative overflow-hidden">
                   <div className="flex justify-between items-center mb-5">
                      <h2 className="text-sm font-black uppercase italic tracking-tighter text-indigo-400">DAILY MISSION PROTOCOL</h2>
                      <button onClick={() => setDayPlan(null)} className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Dismiss</button>
                   </div>
-                  <div className="text-[16px] text-indigo-100 p-6 bg-slate-950/60 rounded-2xl border border-white/5 whitespace-pre-wrap leading-relaxed shadow-inner font-medium min-h-[250px] relative">
+                  <div className="text-[15px] text-indigo-100 p-6 bg-slate-950/60 rounded-2xl border border-white/5 whitespace-pre-wrap leading-relaxed shadow-inner font-mono relative">
                     {isProcessingRoadmap && (
                       <div className="absolute inset-0 z-20 bg-slate-950/95 backdrop-blur-2xl flex flex-col items-center justify-center rounded-2xl text-center p-8">
                         <span className="text-6xl block mb-4 animate-spin">🚀</span>
                         <p className="text-[12px] font-black text-indigo-400 uppercase tracking-[0.5em] animate-pulse">GENERATING DIARY...</p>
-                        <div className="mt-4 w-full max-w-[150px] h-1 bg-indigo-500/20 rounded-full overflow-hidden">
-                           <div className="h-full bg-indigo-500 animate-[shimmer_1.5s_infinite]" style={{width: '40%'}}></div>
-                        </div>
-                        <p className="text-[8px] text-slate-600 mt-2 font-black uppercase tracking-widest">MAPPING TARGETS</p>
                       </div>
                     )}
                     {dayPlan}
@@ -417,12 +410,18 @@ const App: React.FC = () => {
              )}
 
              <div className="glass p-8 rounded-[2.5rem] border border-white/5 mb-8">
-                <div className="flex justify-center py-4">
-                  <button onClick={toggleVoiceInteraction} className={`w-36 h-36 rounded-full flex flex-col items-center justify-center transition-all duration-700 ${isRecording ? 'bg-red-500 shadow-[0_0_100px_rgba(239,68,68,0.7)] scale-110' : 'bg-slate-900 border border-blue-500/20 shadow-xl'}`}>
+                <div className="flex justify-center py-4 relative">
+                  {isRecording && (
+                    <div className="absolute inset-0 flex items-center justify-center scale-150 opacity-30">
+                       <div className="w-48 h-48 rounded-full border-4 border-red-500 animate-ping"></div>
+                    </div>
+                  )}
+                  <button onClick={toggleVoiceInteraction} className={`w-36 h-36 rounded-full flex flex-col items-center justify-center transition-all duration-700 relative z-10 ${isRecording ? 'bg-red-500 shadow-[0_0_100px_rgba(239,68,68,0.7)] scale-110' : 'bg-slate-900 border border-blue-500/20 shadow-xl'}`}>
                     <span className="text-5xl mb-2">{isRecording ? '⏹️' : '🎤'}</span>
                     <span className="text-[10px] font-black uppercase tracking-[0.2em]">{isRecording ? 'LIVE' : 'ACTIVATE'}</span>
                   </button>
                 </div>
+                {isRecording && <p className="text-center text-[10px] font-black text-red-400 uppercase tracking-widest animate-pulse mt-4">Mic active: Ria is listening</p>}
              </div>
           </div>
         )}
