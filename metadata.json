@@ -1,0 +1,19 @@
+{
+  "name": "KARMANYEVADHIKAARASTE (To Do List)",
+  "short_name": "To Do List",
+  "description": "22nd Century AI Productivity Coach",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/5968/5968263.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
