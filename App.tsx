@@ -17,8 +17,11 @@ const App: React.FC = () => {
   const [formCategory, setFormCategory] = useState<'routine' | '5x_speed'>('routine');
   const [formUrgency, setFormUrgency] = useState<TaskUrgency>(TaskUrgency.REGULAR);
   const [alarmEnabled, setAlarmEnabled] = useState(false);
-  const [isFormProgressUnlocked, setIsFormProgressUnlocked] = useState(false);
-  const [initialProgressValue, setInitialProgressValue] = useState(0);
+
+  // Focus Mode State
+  const [focusedTask, setFocusedTask] = useState<Task | null>(null);
+  const [timerSeconds, setTimerSeconds] = useState(1500); // 25 mins
+  const [isTimerActive, setIsTimerActive] = useState(false);
 
   const formRef = useRef({ objective: '', date: '', time: '', category: 'routine', urgency: TaskUrgency.REGULAR, alarm: false });
   const [coachingAdvice, setCoachingAdvice] = useState<{text: string, sources: any[]} | null>(null);
@@ -36,12 +39,28 @@ const App: React.FC = () => {
   const nextStartTimeRef = useRef(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const visualizerIntervalRef = useRef<number | null>(null);
+  const timerIntervalRef = useRef<number | null>(null);
 
   useEffect(() => { localStorage.setItem('tasks', JSON.stringify(tasks)); }, [tasks]);
 
   useEffect(() => {
     formRef.current = { objective: formObjective, date: formDate, time: formTime, category: formCategory, urgency: formUrgency, alarm: alarmEnabled };
   }, [formObjective, formDate, formTime, formCategory, formUrgency, alarmEnabled]);
+
+  // Timer Effect
+  useEffect(() => {
+    if (isTimerActive && timerSeconds > 0) {
+      timerIntervalRef.current = window.setInterval(() => {
+        setTimerSeconds(s => s - 1);
+      }, 1000);
+    } else if (timerSeconds === 0) {
+      setIsTimerActive(false);
+      alert("Deep Work session complete. Great job, Commander.");
+    }
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+  }, [isTimerActive, timerSeconds]);
 
   const resetFormFields = () => {
     setFormObjective('');
@@ -50,7 +69,6 @@ const App: React.FC = () => {
     setFormCategory('routine');
     setFormUrgency(TaskUrgency.REGULAR);
     setAlarmEnabled(false);
-    setInitialProgressValue(0);
   };
 
   const stopVoiceSession = () => {
@@ -181,6 +199,19 @@ const App: React.FC = () => {
     finally { setIsAdviceLoading(false); }
   };
 
+  const startFocusOnTask = (task: Task) => {
+    setFocusedTask(task);
+    setTimerSeconds(1500);
+    setIsTimerActive(true);
+    setActiveTab('focus');
+  };
+
+  const formatTime = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const todayMissions = tasks.filter(t => t.date === new Date().toISOString().split('T')[0]);
 
   return (
@@ -196,7 +227,50 @@ const App: React.FC = () => {
         {activeTab === 'routine' && (
           <div className="space-y-8">
             <button onClick={() => { setShowTaskForm(true); setTimeout(startAiAssistSession, 500); }} className="w-full py-6 rounded-3xl bg-blue-600/10 border-2 border-blue-500/30 flex items-center justify-center gap-4 text-blue-400 font-black uppercase tracking-[0.2em] hover:bg-blue-600 hover:text-white transition-all">🎙️ Initiate Ria Link</button>
-            <div className="space-y-6">{todayMissions.map(task => <TaskCard key={task.id} task={task} onUpdate={(id, up) => setTasks(prev => prev.map(t=>t.id===id?{...t,...up}:t))} onDelete={id => setTasks(prev => prev.filter(t=>t.id!==id))} onEdit={t => {setFormObjective(t.title); setFormUrgency(t.urgency); setShowTaskForm(true);}} />)}</div>
+            <div className="space-y-6">{todayMissions.length > 0 ? todayMissions.map(task => <TaskCard key={task.id} task={task} onFocus={startFocusOnTask} onUpdate={(id, up) => setTasks(prev => prev.map(t=>t.id===id?{...t,...up}:t))} onDelete={id => setTasks(prev => prev.filter(t=>t.id!==id))} onEdit={t => {setFormObjective(t.title); setFormUrgency(t.urgency); setShowTaskForm(true);}} />) : <p className="text-center py-12 text-slate-500 italic">No missions today, Commander. Initiate link to deploy.</p>}</div>
+          </div>
+        )}
+
+        {activeTab === 'focus' && (
+          <div className="flex flex-col items-center justify-center py-10 space-y-12">
+            <div className="text-center">
+              <h2 className="text-blue-500 text-[10px] font-black uppercase tracking-[0.5em] mb-4">Focus Protocol Active</h2>
+              <h1 className="text-2xl font-black text-white px-8">{focusedTask ? focusedTask.title : 'Deep Work Session'}</h1>
+            </div>
+
+            <div className="relative w-72 h-72 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border-4 border-slate-900 shadow-[0_0_50px_rgba(59,130,246,0.1)]"></div>
+              <svg className="w-full h-full -rotate-90">
+                <circle 
+                  cx="50%" cy="50%" r="48%" 
+                  className="fill-none stroke-blue-500 stroke-[4px] transition-all duration-1000"
+                  style={{ strokeDasharray: '603', strokeDashoffset: (603 - (603 * (timerSeconds / 1500))).toString() }}
+                />
+              </svg>
+              <div className="absolute flex flex-col items-center">
+                <span className="text-6xl font-black tracking-tighter text-white tabular-nums">{formatTime(timerSeconds)}</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-2">remaining</span>
+              </div>
+            </div>
+
+            <div className="flex gap-4 w-full max-w-xs">
+              <button 
+                onClick={() => setIsTimerActive(!isTimerActive)}
+                className={`flex-1 py-5 rounded-3xl font-black uppercase tracking-widest text-sm shadow-xl transition-all ${isTimerActive ? 'bg-slate-800 text-slate-400' : 'bg-blue-600 text-white shadow-blue-600/30'}`}
+              >
+                {isTimerActive ? 'Pause' : 'Resume'}
+              </button>
+              <button 
+                onClick={() => { setTimerSeconds(1500); setIsTimerActive(false); }}
+                className="px-8 py-5 bg-slate-900 border border-white/5 rounded-3xl font-black uppercase text-[10px] tracking-widest text-slate-400"
+              >
+                Reset
+              </button>
+            </div>
+
+            <div className="p-6 bg-slate-900/50 border border-white/5 rounded-[2rem] max-w-sm text-center">
+              <p className="text-blue-400 italic font-medium leading-relaxed">"Eliminate all distractions. Your objective is the only reality for the next {Math.floor(timerSeconds/60)} minutes."</p>
+            </div>
           </div>
         )}
 
@@ -204,9 +278,66 @@ const App: React.FC = () => {
           <div className="space-y-10 py-6 max-w-lg mx-auto">
             <div className="p-8 rounded-[2.5rem] bg-slate-900 border border-blue-500/20 shadow-2xl">
               <h3 className="text-xs font-black text-blue-500 uppercase tracking-[0.4em] mb-6">Strategic Intelligence</h3>
-              {isAdviceLoading ? <div className="py-12 flex flex-col items-center gap-4 animate-pulse"><div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div><p className="text-[10px] font-black text-slate-500 uppercase">Analyzing...</p></div> : coachingAdvice ? <div className="space-y-6"><p className="text-slate-200 leading-relaxed font-medium italic text-lg">{coachingAdvice.text}</p></div> : <p className="text-slate-500 italic text-center py-12">No data. Trigger briefing.</p>}
+              {isAdviceLoading ? (
+                <div className="py-12 flex flex-col items-center gap-4 animate-pulse">
+                  <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-[10px] font-black text-slate-500 uppercase">Analyzing...</p>
+                </div>
+              ) : coachingAdvice ? (
+                <div className="space-y-8">
+                  <p className="text-slate-200 leading-relaxed font-medium italic text-lg">{coachingAdvice.text}</p>
+                  
+                  {coachingAdvice.sources && coachingAdvice.sources.length > 0 && (
+                    <div className="pt-6 border-t border-white/5">
+                      <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Research Sources</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {coachingAdvice.sources.map((chunk: any, i: number) => {
+                          const uri = chunk.web?.uri || chunk.maps?.uri;
+                          const title = chunk.web?.title || chunk.maps?.title || "Research Link";
+                          if (!uri) return null;
+                          return (
+                            <a 
+                              key={i} 
+                              href={uri} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="px-3 py-1.5 bg-slate-800 border border-white/5 rounded-lg text-[10px] text-blue-400 font-bold hover:bg-blue-600 hover:text-white transition-all max-w-full truncate"
+                            >
+                              {title}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-slate-500 italic text-center py-12">No data. Trigger briefing for strategic insights.</p>
+              )}
             </div>
             <button onClick={runStrategicAnalysis} className="w-full py-6 bg-blue-600 text-white font-black uppercase tracking-widest rounded-3xl shadow-xl shadow-blue-600/30 active:scale-95 transition-all">Operational Analysis</button>
+          </div>
+        )}
+
+        {activeTab === 'analytics' && (
+          <div className="py-10 text-center space-y-8">
+             <div className="p-10 rounded-[3rem] bg-slate-900 border border-white/5">
+                <div className="text-6xl font-black text-blue-500 mb-2">
+                   {tasks.length > 0 ? Math.round((tasks.filter(t=>t.isCompleted).length / tasks.length) * 100) : 0}%
+                </div>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.5em]">Global Mission Success</p>
+             </div>
+             
+             <div className="grid grid-cols-2 gap-4">
+                <div className="p-6 rounded-3xl bg-slate-900/50 border border-white/5">
+                  <span className="text-2xl font-black text-white">{tasks.filter(t=>t.isCompleted).length}</span>
+                  <p className="text-[10px] font-black text-slate-500 uppercase mt-1">Completed</p>
+                </div>
+                <div className="p-6 rounded-3xl bg-slate-900/50 border border-white/5">
+                  <span className="text-2xl font-black text-white">{tasks.filter(t=>!t.isCompleted).length}</span>
+                  <p className="text-[10px] font-black text-slate-500 uppercase mt-1">Active</p>
+                </div>
+             </div>
           </div>
         )}
       </main>
