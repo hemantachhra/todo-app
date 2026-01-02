@@ -37,7 +37,7 @@ const AlarmModal: React.FC<AlarmModalProps> = ({ task, onStop, onSnooze, onPostp
                 type="date" 
                 value={newDate} 
                 onChange={(e) => setNewDate(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-sm [color-scheme:dark] outline-none focus:border-blue-500"
+                className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-sm [color-scheme:dark] outline-none focus:border-blue-500 text-white"
               />
             </div>
             <div>
@@ -46,7 +46,7 @@ const AlarmModal: React.FC<AlarmModalProps> = ({ task, onStop, onSnooze, onPostp
                 type="time" 
                 value={newTime} 
                 onChange={(e) => setNewTime(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-sm [color-scheme:dark] outline-none focus:border-blue-500"
+                className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-sm [color-scheme:dark] outline-none focus:border-blue-500 text-white"
               />
             </div>
             <div className="pt-4 space-y-3">
@@ -68,20 +68,23 @@ const AlarmModal: React.FC<AlarmModalProps> = ({ task, onStop, onSnooze, onPostp
           <span className="text-5xl">🚨</span>
         </div>
         
-        <div>
-          <p className="text-blue-400 uppercase tracking-[0.3em] text-[10px] font-black mb-2 italic">Active Conflict Detected</p>
-          <h2 className="text-3xl font-black mb-2 italic tracking-tighter">{task.title}</h2>
-          <div className="px-4 py-1.5 bg-slate-900/80 rounded-full border border-white/5 inline-block">
-             <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">{task.category.replace('_', ' ')} • {task.time}</p>
+        <div className="w-full">
+          <p className="text-blue-400 uppercase tracking-[0.3em] text-[10px] font-black mb-2 italic">Urgent Mission Alert</p>
+          <div className="bg-slate-950 p-6 rounded-[2rem] border border-white/5 shadow-inner mb-4">
+            <h2 className="text-2xl font-black italic tracking-tighter text-white break-words">{task.title}</h2>
+          </div>
+          <div className="px-4 py-2 bg-slate-900/80 rounded-full border border-white/5 inline-flex items-center gap-3">
+             <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+             <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">{task.urgency} • Target: {task.time}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 w-full mt-4">
           <button 
             onClick={() => onStop(task.id)}
-            className="py-5 bg-gradient-to-r from-green-500 to-emerald-600 text-black font-black rounded-[1.5rem] uppercase text-sm tracking-widest shadow-xl active:scale-95 transition-all"
+            className="py-6 bg-gradient-to-r from-green-500 to-emerald-600 text-black font-black rounded-[1.8rem] uppercase text-sm tracking-widest shadow-xl active:scale-95 transition-all"
           >
-            Start Mission Now
+            Acknowledge & Start
           </button>
           
           <div className="grid grid-cols-2 gap-3">
@@ -95,7 +98,7 @@ const AlarmModal: React.FC<AlarmModalProps> = ({ task, onStop, onSnooze, onPostp
               onClick={() => onSnooze(task.id, 30)}
               className="py-4 bg-indigo-900/40 border border-indigo-500/30 text-indigo-300 text-[10px] font-black rounded-2xl uppercase tracking-widest hover:bg-indigo-900/60 shadow-lg shadow-indigo-900/20"
             >
-              Deep Snooze (30m)
+              Snooze (30m)
             </button>
           </div>
 
@@ -103,7 +106,7 @@ const AlarmModal: React.FC<AlarmModalProps> = ({ task, onStop, onSnooze, onPostp
             onClick={() => setView('reschedule')}
             className="py-4 bg-slate-900/50 border border-dashed border-slate-700 text-slate-500 text-[10px] font-black rounded-2xl uppercase tracking-widest hover:text-blue-400 hover:border-blue-500/50 transition-all"
           >
-            Postpone to Later
+            Postpone Protocol
           </button>
         </div>
 

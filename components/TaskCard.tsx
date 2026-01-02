@@ -1,107 +1,91 @@
 
 import React, { useState, useEffect } from 'react';
-import { Task, TaskUrgency } from '../types';
+import { Task } from '../types';
 
 interface TaskCardProps {
   task: Task;
   onUpdate: (id: string, updates: Partial<Task>) => void;
   onDelete: (id: string) => void;
+  onEdit: (task: Task) => void;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete }) => {
-  const [internalValue, setInternalValue] = useState(task.completionPercentage);
-  const [isDirty, setIsDirty] = useState(false);
+const TaskCard: React.FC<TaskCardProps> = ({ task, onUpdate, onDelete, onEdit }) => {
+  const [progress, setProgress] = useState(task.completionPercentage);
+  const [statusComment, setStatusComment] = useState(task.interimNotes || '');
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(false);
 
   useEffect(() => {
-    setInternalValue(task.completionPercentage);
-    setIsDirty(false);
+    setProgress(task.completionPercentage);
   }, [task.completionPercentage]);
 
-  const getUrgencyColor = (urgency: TaskUrgency) => {
-    switch (urgency) {
-      case TaskUrgency.URGENT: return 'border-red-500 text-red-400';
-      case TaskUrgency.PRIORITY: return 'border-orange-500 text-orange-400';
-      default: return 'border-blue-500 text-blue-400';
-    }
-  };
+  useEffect(() => {
+    setStatusComment(task.interimNotes || '');
+  }, [task.interimNotes]);
 
-  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseInt(e.target.value);
-    setInternalValue(val);
-    setIsDirty(val !== task.completionPercentage);
-  };
-
-  const handleCommit = () => {
+  const commitChanges = () => {
     onUpdate(task.id, { 
-      completionPercentage: internalValue,
-      isCompleted: internalValue === 100 
+      completionPercentage: progress,
+      interimNotes: statusComment,
+      isCompleted: progress === 100 
     });
-    setIsDirty(false);
+    setIsUnlocked(false);
   };
 
-  const handleReset = () => {
-    setInternalValue(task.completionPercentage);
-    setIsDirty(false);
-  };
+  const hasChanges = progress !== task.completionPercentage || statusComment !== (task.interimNotes || '');
 
   return (
-    <div className={`glass p-5 rounded-[2.5rem] border-l-4 ${getUrgencyColor(task.urgency)} mb-4 animate-in fade-in slide-in-from-bottom-4 shadow-xl border-t border-r border-b border-white/5 relative overflow-hidden`}>
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex-1 mr-4">
-          <h3 className="text-xl font-black italic tracking-tighter text-slate-100">{task.title}</h3>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mt-1">{task.time} • {task.urgency} GRADE</p>
+    <div className={`p-8 rounded-[2.5rem] bg-slate-900/80 border border-white/5 shadow-2xl relative transition-all duration-500 ${task.isCompleted ? 'opacity-50 grayscale scale-[0.98]' : ''}`}>
+      <div className="flex justify-between items-start mb-8">
+        <div className="flex-1 pr-4">
+          <h3 className="text-xl font-bold text-white">{task.title}</h3>
+          <p className="text-sm text-slate-500 font-black mt-2 uppercase tracking-widest">{task.time} • {task.urgency}</p>
         </div>
-        <button 
-          onClick={() => onDelete(task.id)}
-          className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center text-slate-600 hover:text-red-400 border border-white/5 transition-colors"
-        >
-          ✕
-        </button>
+        <div className="flex gap-2">
+          {!showConfirm ? (
+            <>
+              {hasChanges && <button onClick={commitChanges} className="px-4 h-12 rounded-xl bg-blue-600 text-white text-[11px] font-black uppercase">SAVE</button>}
+              <button onClick={() => onEdit(task)} className="w-12 h-12 rounded-xl bg-slate-950 border border-white/5 flex items-center justify-center text-slate-400 text-[10px] font-black">EDIT</button>
+              <button onClick={() => setShowConfirm(true)} className="w-12 h-12 rounded-xl bg-slate-950 border border-white/5 flex items-center justify-center text-slate-400 text-2xl">✕</button>
+            </>
+          ) : (
+            <div className="flex gap-2 p-2 bg-slate-950 rounded-xl border border-red-500/20">
+              <button onClick={() => onDelete(task.id)} className="px-3 py-1 bg-red-600 text-white text-[10px] font-black rounded-lg">DEL</button>
+              <button onClick={() => setShowConfirm(false)} className="px-3 py-1 bg-slate-800 text-white text-[10px] font-black rounded-lg">ESC</button>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="mt-4 space-y-3">
-        <div className="flex justify-between items-end text-[10px] font-black uppercase tracking-[0.2em] mb-1">
-          <span className="text-slate-500">Target Level</span>
-          <span className={`${isDirty ? 'text-orange-400 animate-pulse' : 'text-blue-400'} neo-text-glow`}>
-            {internalValue}% {isDirty && '(Unsynced)'}
-          </span>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <button onClick={() => setIsUnlocked(!isUnlocked)} className={`text-[10px] font-bold px-3 py-1 rounded-full border transition-all ${isUnlocked ? 'bg-blue-600 border-blue-400 text-white animate-pulse' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
+            {isUnlocked ? '🔓 UNLOCKED' : '🔒 LOCKED'}
+          </button>
+          <span className="text-3xl font-black text-white">{progress}%</span>
         </div>
-        
-        <div className="relative pt-1">
+        <div className={`relative h-6 flex items-center px-1 transition-opacity duration-300 ${isUnlocked ? 'opacity-100' : 'opacity-40'}`}>
+          <div className="absolute inset-0 bg-slate-950 rounded-full border border-white/5"></div>
+          <div className="absolute left-0 top-0 bottom-0 rounded-full bg-blue-500" style={{ width: `${progress}%` }}></div>
           <input 
             type="range" 
-            min="0" 
-            max="100" 
-            value={internalValue}
-            onChange={handleSliderChange}
-            className="w-full h-2 bg-slate-900 rounded-full appearance-none cursor-pointer accent-blue-500 border border-white/5"
+            min="0" max="100" step="1"
+            value={progress}
+            disabled={!isUnlocked}
+            onChange={(e) => setProgress(parseInt(e.target.value))}
+            onPointerUp={() => setIsUnlocked(false)} // AUTO LOCK
+            className="w-full h-full relative z-10 appearance-none bg-transparent cursor-pointer"
           />
         </div>
-
-        {isDirty && (
-          <div className="flex gap-2 animate-in slide-in-from-top-2 duration-300">
-            <button 
-              onClick={handleCommit}
-              className="flex-1 py-3 bg-blue-600/20 border border-blue-500/40 rounded-xl text-[9px] font-black text-blue-300 uppercase tracking-widest active:bg-blue-600/40"
-            >
-              Commit Progress
-            </button>
-            <button 
-              onClick={handleReset}
-              className="px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-[9px] font-black text-slate-500 uppercase tracking-widest"
-            >
-              Reset
-            </button>
-          </div>
-        )}
+        <input 
+          type="text"
+          value={statusComment}
+          onChange={(e) => setStatusComment(e.target.value)}
+          placeholder="Status update..."
+          className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 px-5 text-slate-300 outline-none"
+        />
+        {hasChanges && <button onClick={commitChanges} className="w-full py-4 bg-blue-600 text-white font-black uppercase rounded-2xl">CONFIRM CHANGES</button>}
       </div>
-      
-      {task.isCompleted && !isDirty && (
-        <div className="mt-4 pt-4 border-t border-green-500/10 flex items-center justify-center gap-2">
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-green-400 italic">Protocol Completed</span>
-          <span className="text-sm">⚡</span>
-        </div>
-      )}
     </div>
   );
 };
