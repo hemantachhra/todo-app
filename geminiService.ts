@@ -1,4 +1,5 @@
-import { GoogleGenAI, Type, Modality } from "@google/genai";
+
+import { GoogleGenAI, Type, Modality, FunctionDeclaration } from "@google/genai";
 
 export class GeminiService {
   static async getProductivityAdvice(tasks: any[], performance: any[], history: string[], language: 'English' | 'Hindi'): Promise<string> {
@@ -20,7 +21,7 @@ export class GeminiService {
         thinkingConfig: { thinkingBudget: 32768 }
       }
     });
-    return response.text || (language === 'Hindi' ? "अपनी सीमाओं को आगे बढ़ाते रहें।" : "Keep pushing your boundaries.");
+    return response.text || "Keep pushing your boundaries.";
   }
 
   static async generateDailyRoadMap(tasks: any[], currentTime: string, language: 'English' | 'Hindi'): Promise<string> {
@@ -31,9 +32,7 @@ export class GeminiService {
       
       STRICT DIARY PROTOCOL:
       - Provide a clean, ledger-style diary list.
-      - ONLY include the missions provided. Do NOT invent new major tasks.
-      - You may add short "Buffer" or "Review" slots (max 10 mins).
-      - Address the user as "You".
+      - ONLY include the missions provided. 
       
       FORMAT FOR EVERY LINE (STRICT):
       [HH:MM] >> [MISSION NAME] || [ONE-SENTENCE TACTIC]
@@ -46,17 +45,41 @@ export class GeminiService {
         thinkingConfig: { thinkingBudget: 16000 }
       }
     });
-    return response.text || (language === 'Hindi' ? "डायरी विफल रही।" : "Diary protocol failed.");
+    return response.text || "Diary protocol failed.";
   }
 }
 
+const updateTaskFieldDeclaration: FunctionDeclaration = {
+  name: 'update_task_field',
+  parameters: {
+    type: Type.OBJECT,
+    description: 'Update specific mission fields based on user input.',
+    properties: {
+      field: {
+        type: Type.STRING,
+        description: 'The field name to update.',
+        enum: ['objective', 'category', 'priority', 'time', 'date', 'alarm', 'progress']
+      },
+      value: {
+        type: Type.STRING,
+        description: 'The value to set. Category (routine/5x_speed), Priority (Regular/Important/Urgent), Time (HH:MM), Date (YYYY-MM-DD), Alarm (on/off), Progress (0-100).'
+      }
+    },
+    required: ['field', 'value'],
+  },
+};
+
+const launchMissionDeclaration: FunctionDeclaration = {
+  name: 'launch_mission',
+  parameters: {
+    type: Type.OBJECT,
+    description: 'Saves and locks the mission into the system permanently.',
+    properties: {},
+  },
+};
+
 export const connectLiveAPI = (callbacks: any, context: { tasks: any[], reports: any[], history: string[], language: 'English' | 'Hindi' }) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const contextSummary = `ACTIVE MISSIONS: ${JSON.stringify(context.tasks)}.`;
-  const memorySummary = context.history.length > 0 
-    ? `MEMORY BANK: ${context.history.slice(-10).join(' | ')}` 
-    : "This is our first link.";
-  
   return ai.live.connect({
     model: 'gemini-2.5-flash-native-audio-preview-09-2025',
     callbacks,
@@ -64,17 +87,48 @@ export const connectLiveAPI = (callbacks: any, context: { tasks: any[], reports:
       responseModalities: [Modality.AUDIO],
       inputAudioTranscription: {},
       outputAudioTranscription: {},
-      systemInstruction: `CORE IDENTITY: You are Ria, a brilliant and elite female productivity coach. 
-      Address the user directly as "You". 
-      STRICT LANGUAGE: You MUST only speak in ${context.language}.
-      CONTEXT: ${contextSummary}
-      MEMORY: ${memorySummary}
-      
-      BEHAVIOR: You are supportive but strategic. Provide verbal coaching on their current missions. Keep responses focused and professional. Respond ONLY in ${context.language}.`,
+      systemInstruction: `CORE IDENTITY: You are Ria, an elite female productivity coach. Address the user directly as "You". 
+      You MUST ONLY speak in ${context.language}. Start immediately with analysis.`,
       speechConfig: {
-        voiceConfig: { 
-          prebuiltVoiceConfig: { voiceName: 'Kore' }
-        }
+        voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } }
+      }
+    }
+  });
+};
+
+export const connectTaskEntryAPI = (callbacks: any, language: string) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  return ai.live.connect({
+    model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+    callbacks,
+    config: {
+      responseModalities: [Modality.AUDIO],
+      tools: [{ functionDeclarations: [updateTaskFieldDeclaration, launchMissionDeclaration] }],
+      inputAudioTranscription: {},
+      outputAudioTranscription: {},
+      systemInstruction: `You are Ria, the Elite Mission Assistant. 
+      Your mission: Execute a simple, strict step-by-step task entry flow.
+
+      FLOW PROTOCOL (MANDATORY STEPS):
+      1. START: Greet instantly: "Ria standing by. What is your operational objective for this mission?"
+      2. OBJECTIVE: Once user provides objective, call 'update_task_field', then say: "Objective locked. For what date and time shall we schedule this?"
+      3. DATE & TIME: Once provided, call 'update_task_field' for both, then say: "Date and Time locked. Is this a Routine task or a Five-X Speed operation?"
+      4. CATEGORY: Once provided, call 'update_task_field', then say: "Category secured. What is the priority level? Regular, Important, or Urgent?"
+      5. PRIORITY: Once provided, call 'update_task_field', then say: "Priority set. Should I activate the alarm protocol for this mission?"
+      6. ALARM: Once answered, call 'update_task_field', then say: "Alarm configured. Mission locked and ready for launch." 
+      7. LAUNCH: Summarize and call 'launch_mission' tool.
+      8. FINAL LOOP: Ask: "Shall we enter another mission into the ledger?"
+         - If Yes: Say "Resetting protocols. What is the next objective?" and continue step 1.
+         - If No: Say "Operational link terminated. Good luck, commander."
+
+      STRICT RULES:
+      - NO CODE-SPEAK: NEVER say "HH:MM" or "YYYY-MM-DD". Use natural speech like "Tomorrow at 5 PM".
+      - PROACTIVE: You drive the conversation.
+      - TERMINOLOGY: Always use "Important" as a priority level.
+      - TOOL USE: You MUST call 'update_task_field' every time a user provides a detail.
+      - LANGUAGE: ${language} only.`,
+      speechConfig: {
+        voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } }
       }
     }
   });

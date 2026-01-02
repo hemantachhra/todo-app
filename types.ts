@@ -1,7 +1,7 @@
 
 export enum TaskUrgency {
   REGULAR = 'Regular',
-  PRIORITY = 'Priority',
+  IMPORTANT = 'Important',
   URGENT = 'Urgent'
 }
 
@@ -9,14 +9,17 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
-  date: string; // ISO String
+  date: string; // ISO String (YYYY-MM-DD)
   time: string; // HH:mm
   urgency: TaskUrgency;
   completionPercentage: number;
   notes: string;
-  interimNotes?: string; // New: interim tasks pending
+  interimNotes?: string;
   category: 'routine' | '5x_speed';
   isAlarmed: boolean;
+  alarmLeadTime?: number; // Minutes prior (0, 10, 30)
+  isDailyRepeat?: boolean;
+  isRepeatAtTime?: boolean;
   isSnoozed: boolean;
   snoozeTime?: number;
   isCompleted: boolean;
@@ -28,6 +31,7 @@ export interface DailyReport {
   tasksCompleted: number;
   totalTasks: number;
   aiAnalysis?: string;
+  nextSteps?: string;
 }
 
 export interface ScoreConfig {
@@ -53,7 +57,7 @@ export const APP_SCORE_CONFIG: ScoreConfig = {
   },
   multipliers: {
     [TaskUrgency.REGULAR]: 1,
-    [TaskUrgency.PRIORITY]: 2,
+    [TaskUrgency.IMPORTANT]: 2,
     [TaskUrgency.URGENT]: 3,
   },
 };
