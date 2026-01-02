@@ -2,24 +2,23 @@
 import { GoogleGenAI, Type, Modality, FunctionDeclaration } from "@google/genai";
 
 export class GeminiService {
-  static async getProductivityAdvice(tasks: any[], performance: any[], history: string[]): Promise<string> {
+  static async getProductivityAdvice(tasks: any[], performance: any[], history: string[]): Promise<{text: string, sources: any[]}> {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview',
-      contents: `You are Ria, an elite coach. Analyze missions: ${JSON.stringify(tasks)}. Provide 3 actionable strategic insights. Concise, elite, feminine tone.`,
-      config: { thinkingConfig: { thinkingBudget: 32768 } }
+      contents: `You are Ria, an elite productivity coach. Current missions: ${JSON.stringify(tasks)}. 
+      Search for the most effective scientific productivity frameworks to complete these missions faster.
+      Provide 3 strategic insights. Elite feminine tone.`,
+      config: {
+        tools: [{ googleSearch: {} }],
+        thinkingConfig: { thinkingBudget: 32768 }
+      }
     });
-    return response.text || "Push your boundaries, Commander.";
-  }
-
-  static async generateDailyRoadMap(tasks: any[], currentTime: string): Promise<string> {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: `Current time: ${currentTime}. Missions: ${JSON.stringify(tasks)}. Generate a ledger schedule. Format: [HH:MM] >> [MISSION] || [TACTIC]. No intro.`,
-      config: { thinkingConfig: { thinkingBudget: 16000 } }
-    });
-    return response.text || "Roadmap offline.";
+    
+    return {
+      text: response.text || "Push your boundaries, Commander.",
+      sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks || []
+    };
   }
 }
 
@@ -27,9 +26,12 @@ const updateTaskFieldDeclaration: FunctionDeclaration = {
   name: 'update_task_field',
   parameters: {
     type: Type.OBJECT,
-    description: 'Update specific mission fields.',
+    description: 'Update mission parameters.',
     properties: {
-      field: { type: Type.STRING, enum: ['objective', 'category', 'priority', 'time', 'date', 'alarm'] },
+      field: { 
+        type: Type.STRING, 
+        enum: ['objective', 'category', 'priority', 'time', 'date', 'alarm']
+      },
       value: { type: Type.STRING }
     },
     required: ['field', 'value'],
@@ -53,19 +55,19 @@ export const connectTaskEntryAPI = (callbacks: any) => {
       outputAudioTranscription: {},
       systemInstruction: `You are Ria, the Elite Mission Assistant. 
       
-      STRICT FLOW PROTOCOL:
-      1. START: Greet immediately: "Ria standing by. What is your operational objective for this mission?"
-      2. OBJECTIVE: Once provided, call 'update_task_field', then say: "Objective locked. What date and time do you prefer doing this task?"
-      3. DATE/TIME: Once provided, call tools, then say: "Time parameters secured. What type of task do you want to mark it? A routine task or 5x speed?"
-      4. CATEGORY: Once provided, call tool, then say: "Category secured. Set priority level: Regular, Important, or Urgent?"
-      5. PRIORITY: Once provided, call tool, then say: "Priority set. Should I activate the alarm protocol for this mission?"
-      6. ALARM: Once provided, call tool, then say: "Alarm configured. Mission locked."
-      7. LAUNCH: Call 'launch_mission' tool.
-      8. FINAL ASK: Ask "Shall we enter another mission into the ledger?"
-         - IF YES: Say "Fresh ledger initialized. What is the next objective?" and restart at Step 1.
-         - IF NO: Say "Operational link terminated. Good luck, commander." (Must use the word "terminated" or "good luck").
+      STRICT FLOW:
+      1. GREET: "Ria standing by. What is your operational objective for this mission?"
+      2. OBJECTIVE -> GOTO DATE/TIME: "Objective locked. What date and time?"
+      3. DATE/TIME -> GOTO CATEGORY: "Time parameters secured. Routine or 5x speed?"
+      4. CATEGORY -> GOTO PRIORITY: "Category secured. Priority level: Regular, Important, or Urgent?"
+      5. PRIORITY -> GOTO ALARM: "Priority set. Activate alarm protocol?"
+      6. ALARM -> FINISH: "Alarm configured. Mission locked."
+      7. CALL 'launch_mission' tool.
+      8. ASK: "Shall we enter another mission?"
+         - YES: "Fresh ledger initialized. Next objective?" (Restart)
+         - NO: "Operational link terminated. Good luck, commander."
 
-      RULES: No code-speak. Use "Important" for priority. Proactive voice only. Always confirm after calling a tool.`,
+      RULES: Always use 'locked' terminology. 'Important' is the standard high priority.`,
       speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } }
     }
   });
