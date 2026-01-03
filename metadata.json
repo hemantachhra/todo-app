@@ -1,7 +1,7 @@
 {
-  "name": "KARMANYEVADHIKAARASTE (To Do List)",
-  "short_name": "To Do List",
-  "description": "22nd Century AI Productivity Coach",
+  "name": "To Do List - Tactical",
+  "short_name": "To Do",
+  "description": "AI-Driven Operational Intelligence",
   "requestFramePermissions": [
     "microphone"
   ],

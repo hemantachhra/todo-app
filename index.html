@@ -7,39 +7,98 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="metadata.json">
-    <title>To Do List - Powered by Ria</title>
+    <title>To Do List - Tactical AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+          --neon-blue: #3b82f6;
+          --neon-red: #ef4444;
+          --slate-deep: #020617;
+        }
         body {
             font-family: 'Space Grotesk', sans-serif;
-            background-color: #020617;
+            background-color: var(--slate-deep);
             color: #f8fafc;
             overflow-x: hidden;
             -webkit-tap-highlight-color: transparent;
             padding-top: env(safe-area-inset-top);
         }
         .glass {
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .neo-shadow {
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
         .neo-text-glow {
-            text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
         }
-        /* Hide scrollbars but allow scrolling */
-        ::-webkit-scrollbar {
-            display: none;
+        .scanline {
+            width: 100%;
+            height: 100px;
+            z-index: 100;
+            background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(59, 130, 246, 0.02) 50%, rgba(0, 0, 0, 0) 100%);
+            opacity: 0.1;
+            position: fixed;
+            bottom: 100%;
+            pointer-events: none;
+            animation: scanline 10s linear infinite;
         }
-        * {
-            scrollbar-width: none;
+        @keyframes scanline {
+            0% { bottom: 100%; }
+            100% { bottom: -100px; }
         }
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(200%); }
+        @keyframes pulse-neon {
+            0%, 100% { opacity: 0.8; filter: brightness(1); }
+            50% { opacity: 1; filter: brightness(1.3); text-shadow: 0 0 15px rgba(59, 130, 246, 0.8); }
+        }
+        .pulse-text {
+            animation: pulse-neon 2s infinite;
+        }
+        
+        /* Progress Bar Range Slider Styling */
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--neon-blue);
+            border-radius: 50%; /* Circular shape */
+            cursor: grab;
+            border: 2px solid #ffffff;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 0;
+            position: relative;
+            z-index: 20;
+        }
+        
+        input[type="range"]:active::-webkit-slider-thumb {
+            cursor: grabbing;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.9), 0 0 40px rgba(59, 130, 246, 0.4);
+            transform: scale(1.25);
+            background: #60a5fa; /* Lighter blue on press */
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: var(--neon-blue);
+            border-radius: 50%;
+            cursor: grab;
+            border: 2px solid #ffffff;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        input[type="range"]:active::-moz-range-thumb {
+            cursor: grabbing;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.9), 0 0 40px rgba(59, 130, 246, 0.4);
+            transform: scale(1.25);
+            background: #60a5fa;
+        }
+
+        .mission-grid {
+          background-image: radial-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+          background-size: 30px 30px;
         }
     </style>
 <script type="importmap">
@@ -53,9 +112,9 @@
 }
 </script>
 </head>
-<body>
+<body class="mission-grid">
+    <div class="scanline"></div>
     <div id="root"></div>
-    <!-- Entry point script for deployment -->
     <script type="module" src="./index.tsx"></script>
 </body>
 </html>
