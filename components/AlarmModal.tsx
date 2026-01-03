@@ -17,7 +17,36 @@ const AlarmModal: React.FC<AlarmModalProps> = ({ task, onStop, onSnooze, onPostp
 
   useEffect(() => {
     const interval = setInterval(() => setPulse(p => !p), 1000);
-    return () => clearInterval(interval);
+    
+    // Audio Alarm Setup
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    let oscillator: OscillatorNode | null = null;
+    let gainNode: GainNode | null = null;
+
+    const playBeep = () => {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      oscillator = audioCtx.createOscillator();
+      gainNode = audioCtx.createGain();
+      
+      oscillator.type = 'square';
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+      gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.5);
+    };
+
+    const audioInterval = setInterval(playBeep, 1000);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(audioInterval);
+      audioCtx.close().catch(e => console.error("Audio closure error", e));
+    };
   }, []);
 
   const handlePostponeSubmit = (e: React.FormEvent) => {
@@ -29,29 +58,29 @@ const AlarmModal: React.FC<AlarmModalProps> = ({ task, onStop, onSnooze, onPostp
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 glass backdrop-blur-3xl animate-in fade-in duration-300">
         <div className="w-full max-w-md p-8 rounded-[2.5rem] border border-blue-500/30 bg-slate-950 shadow-2xl">
-          <h2 className="text-xl font-black italic uppercase tracking-tighter mb-6 text-blue-400">Reschedule Protocol</h2>
+          <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-6 text-blue-400">Reschedule Protocol</h2>
           <form onSubmit={handlePostponeSubmit} className="space-y-6">
             <div>
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">New Target Date</label>
+              <label className="text-[12px] font-black text-slate-500 uppercase tracking-widest block mb-2">New Target Date</label>
               <input 
                 type="date" 
                 value={newDate} 
                 onChange={(e) => setNewDate(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-sm [color-scheme:dark] outline-none focus:border-blue-500 text-white"
+                className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-base [color-scheme:dark] outline-none focus:border-blue-500 text-white"
               />
             </div>
             <div>
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">New Target Time</label>
+              <label className="text-[12px] font-black text-slate-500 uppercase tracking-widest block mb-2">New Target Time</label>
               <input 
                 type="time" 
                 value={newTime} 
                 onChange={(e) => setNewTime(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-sm [color-scheme:dark] outline-none focus:border-blue-500 text-white"
+                className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-base [color-scheme:dark] outline-none focus:border-blue-500 text-white"
               />
             </div>
             <div className="pt-4 space-y-3">
               <button type="submit" className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-xs tracking-widest shadow-lg shadow-blue-900/40">Confirm Postpone</button>
-              <button type="button" onClick={() => setView('alert')} className="w-full py-2 text-slate-500 text-[10px] font-black uppercase tracking-widest">Back</button>
+              <button type="button" onClick={() => setView('alert')} className="w-full py-2 text-slate-500 text-[12px] font-black uppercase tracking-widest">Back</button>
             </div>
           </form>
         </div>
@@ -69,13 +98,13 @@ const AlarmModal: React.FC<AlarmModalProps> = ({ task, onStop, onSnooze, onPostp
         </div>
         
         <div className="w-full">
-          <p className="text-blue-400 uppercase tracking-[0.3em] text-[10px] font-black mb-2 italic">Urgent Mission Alert</p>
+          <p className="text-blue-400 uppercase tracking-[0.3em] text-[12px] font-black mb-2 italic">Urgent Mission Alert</p>
           <div className="bg-slate-950 p-6 rounded-[2rem] border border-white/5 shadow-inner mb-4">
-            <h2 className="text-2xl font-black italic tracking-tighter text-white break-words">{task.title}</h2>
+            <h2 className="text-3xl font-black italic tracking-tighter text-white break-words">{task.title}</h2>
           </div>
           <div className="px-4 py-2 bg-slate-900/80 rounded-full border border-white/5 inline-flex items-center gap-3">
              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-             <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">{task.urgency} • Target: {task.time}</p>
+             <p className="text-slate-400 text-[12px] font-bold uppercase tracking-widest">{task.urgency} • Target: {task.time}</p>
           </div>
         </div>
 
@@ -90,13 +119,13 @@ const AlarmModal: React.FC<AlarmModalProps> = ({ task, onStop, onSnooze, onPostp
           <div className="grid grid-cols-2 gap-3">
             <button 
               onClick={() => onSnooze(task.id, 5)}
-              className="py-4 bg-slate-900 border border-slate-800 text-white text-[10px] font-black rounded-2xl uppercase tracking-widest hover:bg-slate-800"
+              className="py-4 bg-slate-900 border border-slate-800 text-white text-[12px] font-black rounded-2xl uppercase tracking-widest hover:bg-slate-800"
             >
               Snooze (5m)
             </button>
             <button 
               onClick={() => onSnooze(task.id, 30)}
-              className="py-4 bg-indigo-900/40 border border-indigo-500/30 text-indigo-300 text-[10px] font-black rounded-2xl uppercase tracking-widest hover:bg-indigo-900/60 shadow-lg shadow-indigo-900/20"
+              className="py-4 bg-indigo-900/40 border border-indigo-500/30 text-indigo-300 text-[12px] font-black rounded-2xl uppercase tracking-widest hover:bg-indigo-900/60 shadow-lg shadow-indigo-900/20"
             >
               Snooze (30m)
             </button>
@@ -104,13 +133,13 @@ const AlarmModal: React.FC<AlarmModalProps> = ({ task, onStop, onSnooze, onPostp
 
           <button 
             onClick={() => setView('reschedule')}
-            className="py-4 bg-slate-900/50 border border-dashed border-slate-700 text-slate-500 text-[10px] font-black rounded-2xl uppercase tracking-widest hover:text-blue-400 hover:border-blue-500/50 transition-all"
+            className="py-4 bg-slate-900/50 border border-dashed border-slate-700 text-slate-500 text-[12px] font-black rounded-2xl uppercase tracking-widest hover:text-blue-400 hover:border-blue-500/50 transition-all"
           >
             Postpone Protocol
           </button>
         </div>
 
-        <p className="text-slate-600 text-[9px] font-bold uppercase tracking-[0.2em] mt-2 italic">Looping Audio Protocol Active</p>
+        <p className="text-slate-600 text-[11px] font-bold uppercase tracking-[0.2em] mt-2 italic">Tactical Audio Loop Active</p>
       </div>
     </div>
   );
